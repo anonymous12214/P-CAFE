@@ -152,7 +152,7 @@ def load_mimic_text():
     # Construct file paths dynamically
     path = os.path.join(base_dir, 'input\\data_with_text.json')
     df = pd.read_json(path, lines=True)
-    df = df.drop(columns=['subject_id', 'hadm_id', 'icustay_id'])
+    df = df.drop(columns=['subject_id', 'hadm_id', 'icustay_id','los'])
     # define the label mortality_inhospital as Y and drop from df
     Y = df['mortality_inhospital'].to_numpy().reshape(-1)
     df = df.drop(columns=['mortality_inhospital'])

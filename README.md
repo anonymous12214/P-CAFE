@@ -1,6 +1,6 @@
-# **PCAFE**
+# **P-CAFE**
 
-**PCAFE** is a Python library designed for feature selection (FS) in electronic health record (EHR) datasets.
+**P-CAFE** is a Python library designed for feature selection (FS) in electronic health record (EHR) datasets.
 
 ## **Key Contributions**
 
@@ -9,7 +9,8 @@
   - Multiple data modalities  
   - Missing values  
   - Cost-aware decision-making
-  - Personalized and Iterative FS 
+  - Personalized and Iterative FS
+  - Time series data
 
 ## **Building Benchmarks**
 

@@ -27,8 +27,20 @@ Navigate to the **`Dataset_Creation`** directory for instructions.
 
 ## **Running the Code**
 
-To execute the main scripts:  
-1.choose the dataset you want in the FLAG section in embedder_guesser.py
-2.Run **`embedder_guesser.py`** 
-3.For the DDQN agent run **`main_robust.py`**
-   for other agent run **`main_sb3.py`** and choose the RL agent.
+1. Dataset Configuration
+
+Open `embedder_guesser.py` and choose your dataset by modifying the `--data` argument or the `FLAG` section.
+
+Supported datasets:
+- `pcafe_utils.load_time_Series()` – eICU time series data
+- `pcafe_utils.load_mimic_text()` – MIMIC-III multimodal data (includes clinical text)
+- `pcafe_utils.load_mimic_time_series()` – MIMIC-III numeric time series
+
+Also, define the feature acquisition costs by setting `self.cost_list` in the `MultimodalGuesser` class.
+
+
+2. Running the embedder_guesser Module
+
+3. For the DDQN agent run **`main_robust.py`**
+  for other agent run **`main_sb3.py`** and choose the RL agent.
+

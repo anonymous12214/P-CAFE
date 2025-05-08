@@ -17,8 +17,10 @@ To generate the benchmark datasets:
 - **MIMIC-III Numeric**  
 - **MIMIC-III with Costs**  
 - **MIMIC-III Multi-Modal Dataset**  
-
+- **eICU Dataset**
 Navigate to the **`Dataset_Creation`** directory for instructions.
+
+
 
 > **Important:**  
 > The MIMIC-III data itself is not provided. You must acquire the data independently from [MIMIC-III on PhysioNet](https://mimic.physionet.org/).

@@ -3,7 +3,10 @@
 **P-CAFE** is a Python library designed for feature selection (FS) in electronic health record (EHR) datasets.
 
 This package is based on the following paper-
-## **Key Contributions**
+
+#### Installation
+   pip install -r requirements.txt
+
 
 ## **Personalized Cost-Aware Feature Selection (FS):**  
   A novel method tailored for EHR datasets, addressing challenges such as:  

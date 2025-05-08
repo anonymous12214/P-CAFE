@@ -8,7 +8,7 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 import pandas as pd
-from ts2vec import TS2Vec
+
 
 
 def add_noise(X, noise_std=0.01):

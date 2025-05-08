@@ -21,7 +21,7 @@ To generate the benchmark datasets:
 - **MIMIC-III Multi-Modal Dataset**  
 - **eICU Dataset**
 
-Navigate to the **`Dataset_Creation`** directory for instructions.
+Navigate to the **`data`** directory for instructions.
 
 
 
@@ -32,12 +32,13 @@ Navigate to the **`Dataset_Creation`** directory for instructions.
 
 1. Dataset Configuration
 
-Open `embedder_guesser.py` and choose your dataset by modifying the `--data` argument or the `FLAG` section.
+Open `embedder_guesser.py` and choose your dataset by modifying the `--data` argument in the `FLAG` section.
 
 Supported datasets:
 - `pcafe_utils.load_time_Series()` – eICU time series data
 - `pcafe_utils.load_mimic_text()` – MIMIC-III multimodal data (includes clinical text)
 - `pcafe_utils.load_mimic_time_series()` – MIMIC-III numeric time series
+- 
 
 Define the feature costs by setting `self.cost_list` in the `MultimodalGuesser` class.
 

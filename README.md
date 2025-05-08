@@ -46,7 +46,7 @@ Define the feature costs by setting `self.cost_list` in the `MultimodalGuesser` 
 
 3. Running the embedder_guesser Module
 
-4. For the DDQN agent run **`main_robust.py`**, for other agent run **`main_sb3.py`** and choose the RL agent.
+4. For the DDQN agent run **`main_robust.py in the DDQN folder`**, for other agent run **`main_sb3.py`** in the Agents folder and choose the RL agent.
 
 
 ## **Examples**

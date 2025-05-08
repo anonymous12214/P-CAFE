@@ -1,9 +1,9 @@
 import shutil
 import torch.nn
 from typing import List, Tuple
-from env_robust import *
-from agent import *
-from PrioritiziedReplayMemory import *
+from src.DDQN.env_robust import *
+from src.DDQN.agent import *
+from src.DDQN.PrioritiziedReplayMemory import *
 from sklearn.metrics import roc_auc_score, average_precision_score
 import time
 with open(r'C:\Users\kashann\PycharmProjects\PCAFE-MIMIC\Integration\user_config_naama.json', 'r') as f:

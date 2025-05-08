@@ -1,5 +1,5 @@
 import gymnasium
-from embedder_guesser import *
+from src.DDQN.embedder_guesser import *
 from gymnasium import spaces
 
 

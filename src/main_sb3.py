@@ -21,10 +21,6 @@ parser.add_argument("--save_dir",
                     type=str,
                     default='ddqn_robust_models',
                     help="Directory for saved models")
-parser.add_argument("--save_guesser_dir",
-                    type=str,
-                    default='guesser_multi',
-                    help="Directory for saved guesser model")
 parser.add_argument("--gamma",
                     type=float,
                     default=0.9,
@@ -87,15 +83,11 @@ parser.add_argument("--val_trials_wo_im",
                     type=int,
                     default=5,
                     help="Number of validation trials without improvement")
-parser.add_argument("--cost_budget",
-                    type=int,
-                    default=36,
-                    help="Number of validation trials without improvement")
-
 parser.add_argument("--device",
                     type=str,
                     default=device,
                     help="Device for training")
+
 
 FLAGS = parser.parse_args(args=[])
 
@@ -104,15 +96,16 @@ FLAGS = parser.parse_args(args=[])
 def PPO_agent():
     env = myEnv(flags=FLAGS)
     model = PPO("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=100)
+    model.learn(total_timesteps=100000)
     return model, env
 
 
 # Define agent for SAC
 def SAC_agent():
     env = myEnv(flags=FLAGS)
-    model = SAC("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=100)
+    model = SACDiscrete("MlpPolicy", env, verbose=1)
+    # model = SAC("MlpPolicy", env, verbose=1)
+    model.learn(total_timesteps=100000)
     return model, env
 
 
@@ -121,7 +114,7 @@ def SAC_agent():
 def DQN_agent():
     env = myEnv(flags=FLAGS)
     model = DQN("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=100)
+    model.learn(total_timesteps=100000)
     return model, env
 
 
@@ -129,7 +122,7 @@ def DQN_agent():
 def A2C_agent():
     env = myEnv(flags=FLAGS)
     model = A2C("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=100)
+    model.learn(total_timesteps=100000)
     return model, env
 
 
@@ -185,12 +178,12 @@ def test(env, model, agent) -> float:
 
 def main():
     os.chdir(FLAGS.directory)
-    model, env = PPO_agent()
-    test(env, model, 'PPO')
+    # model, env = PPO_agent()
+    # test(env, model, 'PPO')
     model, env = DQN_agent()
     test(env, model, 'DQN')
-    model, env = A2C_agent()
-    test(env, model, 'A2C')
+    # model, env = A2C_agent()
+    # test(env, model, 'A2C')
     # model, env = TD3_agent()
     # test(env, model, 'TD3')
     # model, env = SAC_agent()

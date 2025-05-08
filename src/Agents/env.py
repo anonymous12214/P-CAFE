@@ -4,9 +4,20 @@ from gymnasium import spaces
 
 
 class myEnv(gymnasium.Env):
+    """
+    Custom Gymnasium environment for feature acquisition and classification.
+    Interacts with a MultimodalGuesser model to decide which costly tests to run
+    on a patient before making a prediction, balancing cost vs. classification accuracy.
+    """
     def __init__(self,
                  flags
                  ):
+        """
+        Initialize the environment.
+
+        Args:
+            flags: Configuration flags (must contain 'device').
+        """
         super(myEnv, self).__init__()
         self.guesser = MultimodalGuesser()
 
@@ -40,6 +51,19 @@ class myEnv(gymnasium.Env):
               train_guesser=True,
               seed=None,
               options=None):
+        """
+        Reset the environment for a new episode.
+
+        Args:
+            mode (str): 'training' or 'test'
+            patient (int): Patient index to use (only in test mode)
+            train_guesser (bool): Whether to allow guesser training
+            seed: Not used (for Gym compatibility)
+            options: Not used (for Gym compatibility)
+
+        Returns:
+            observation (np.ndarray), info (dict)
+        """
         self.state = np.concatenate([np.zeros(self.guesser.features_total)])
         if mode == 'training':
             if isinstance(self.X_train, list):
@@ -72,7 +96,16 @@ class myEnv(gymnasium.Env):
         return self.state, info
 
     def step(self, action, mode='training'):
-        # Convert action to scalar if needed
+        """
+        Take a step in the environment.
+
+        Args:
+            action (int): Chosen action
+            mode (str): 'training' or 'test'
+
+        Returns:
+            next_state (np.ndarray), reward (float), done (bool), truncated (bool), info (dict)
+        """
         if isinstance(action, torch.Tensor):
             action_number = int(action.item())
         else:
@@ -105,6 +138,15 @@ class myEnv(gymnasium.Env):
         return self.state, reward, terminated, False, info  # Set 'truncated' to False if not relevant
 
     def prob_guesser(self, state):
+        """
+        Run guesser model and return probability for correct class.
+
+        Args:
+            state (np.ndarray): Current state
+
+        Returns:
+            float: Probability of correct class
+        """
         guesser_input = torch.Tensor(
             state[:self.guesser.features_total])
         if torch.cuda.is_available():
@@ -116,6 +158,15 @@ class myEnv(gymnasium.Env):
         return self.correct_prob
 
     def prob_guesser_for_positive(self, state):
+        """
+        Get probability for positive class (class 1).
+
+        Args:
+            state (np.ndarray): Input features
+
+        Returns:
+            float: Probability of class 1
+        """
         guesser_input = torch.Tensor(
             state[:self.guesser.features_total])
         if torch.cuda.is_available():
@@ -124,6 +175,16 @@ class myEnv(gymnasium.Env):
         return self.guesser(guesser_input).squeeze()[1].item()
 
     def update_state_for_time_series(self, action, mode):
+        """
+        Update state for time-series input.
+
+        Args:
+            action (int): Chosen action
+            mode (str): 'training' or 'test'
+
+        Returns:
+            np.ndarray: Updated state
+        """
         next_state = np.array(self.state)
         input = self.X_train[self.patient]
         if action != 0:
@@ -145,6 +206,16 @@ class myEnv(gymnasium.Env):
         return next_state
 
     def update_state_basic(self, action, mode):
+        """
+        Update state for basic tabular/image/text input.
+
+        Args:
+            action (int): Action index
+            mode (str): 'training' or 'test'
+
+        Returns:
+            np.ndarray: Updated state
+        """
         next_state = np.array(self.state)
         features_revealed = self.guesser.map_test[action]
         for feature in features_revealed:
@@ -170,6 +241,16 @@ class myEnv(gymnasium.Env):
         return next_state
 
     def update_state(self, action, mode):
+        """
+        Update state based on chosen action (acquire feature or guess).
+
+        Args:
+            action (int): Action index
+            mode (str): 'training' or 'test'
+
+        Returns:
+            np.ndarray: New state
+        """
         prev_state = np.array(self.state)
         if action < self.guesser.tests_number:  # Not making a guess
             if isinstance(self.X_train, list):
@@ -191,13 +272,21 @@ class myEnv(gymnasium.Env):
             return prev_state
 
     def _compute_internal_reward(self, mode):
-        """ Compute the reward """
+        """
+               Compute internal reward (skips if test mode).
+
+               Args:
+                   mode (str): 'training' or 'test'
+
+               Returns:
+                   float or None: Reward or None
+               """
         if mode == 'test':
             return None
         return self.reward
 
     def is_numeric_value(self, value):
-        # Check if the value is an integer, a floating-point number, or a tensor of type float or double
+        """Check if value is numeric or float tensor."""
         if isinstance(value, (int, float)):
             return True
         elif isinstance(value, torch.Tensor):
@@ -206,14 +295,14 @@ class myEnv(gymnasium.Env):
         return False
 
     def is_text_value(self, value):
-        # Check if the value is a string
+        """Check if value is a string (text)."""
         if isinstance(value, str):
             return True
         else:
             return False
 
     def is_image_value(self, value):
-        # check if value is path that ends with 'png' or 'jpg'
+        """Check if value is a path to image file."""
         if isinstance(value, str):
             if value.endswith('png') or value.endswith('jpg'):
                 return True

@@ -44,3 +44,7 @@ Also, define the feature acquisition costs by setting `self.cost_list` in the `M
 3. For the DDQN agent run **`main_robust.py`**
   for other agent run **`main_sb3.py`** and choose the RL agent.
 
+
+
+![Qualitative Example](p-cafe-image-figure1.png)
+ As shown in the Figure,  P-CAFE iteratively selects features in stages, personalizing the FS process to individual cases. It integrates demographic, laboratory, categorical, and textual data iteratively.

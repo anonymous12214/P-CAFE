@@ -28,6 +28,7 @@ Navigate to the **`Dataset_Creation`** directory for instructions.
 ## **Running the Code**
 
 To execute the main scripts:  
-1. Run **`embedder_guesser.py`**
+1. Run **`embedder_guesser.py`** 
+2. choose the data: 
 2. For the DDQN agent run **`main_robust.py`**
    for other agent run **`main_sb3.py`** and choose the RL agent.

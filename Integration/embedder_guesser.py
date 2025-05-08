@@ -82,6 +82,22 @@ parser.add_argument("--save_dir",
                     type=str,
                     default='guesser_eICU',
                     help="save path")
+parser.add_argument(
+    "--data",
+    type=str,
+    default="pcafe_utils.load_time_Series()",
+    help=(
+        "Dataset loader function to use. Options:\n"
+        "  pcafe_utils.load_time_Series()        - eICU time series data\n"
+        "  pcafe_utils.load_mimic_text()         - MIMIC-III multi-modal (includes text)\n"
+        "  pcafe_utils.load_mimic_time_series()  - MIMIC-III numeric time series data"
+    )
+)
+
+
+
+
+
 FLAGS = parser.parse_args(args=[])
 
 
@@ -169,13 +185,7 @@ class MultimodalGuesser(nn.Module):
     def __init__(self):
         super(MultimodalGuesser, self).__init__()
         self.device = DEVICE
-        #self.X, self.y, self.tests_number, self.map_test = pcafe_utils.load_time_Series()
-        self.X, self.y, self.tests_number, self.map_test = pcafe_utils.load_mimic_text()
-        # self.X, self.y, self.tests_number, self.map_test = pcafe_utils.load_mimic_only_text()
-        # self.X, self.y, self.tests_number, self.map_test = pcafe_utils.load_mimic_time_series()
-        # self.X, self.y, self.tests_number, self.map_test = pcafe_utils.load_mimic_no_text()
-
-
+        self.X, self.y, self.tests_number, self.map_test= FLAGS.data
         self.summarize_text_model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn").to(
             self.device)
         self.tokenizer_summarize_text_model = BartTokenizer.from_pretrained("facebook/bart-large-cnn")

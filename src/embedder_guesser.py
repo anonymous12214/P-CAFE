@@ -181,11 +181,27 @@ class LSTMEncoder(nn.Module):
         return embedding
 
 
+
+def load_data_function(data_loader_name):
+    data_loaders = {
+        "load_time_Series": pcafe_utils.load_time_Series,
+        "load_mimic_text": pcafe_utils.load_mimic_text,
+        "load_mimic_time_series": pcafe_utils.load_mimic_time_series,
+    }
+
+    # Return the appropriate function based on the provided name
+    return data_loaders.get(data_loader_name, pcafe_utils.load_time_Series)  # Default to load_time_Series
+
+
+
 class MultimodalGuesser(nn.Module):
     def __init__(self):
         super(MultimodalGuesser, self).__init__()
         self.device = DEVICE
-        self.X, self.y, self.tests_number, self.map_test= FLAGS.data
+        # Load the function based on the argument
+        data_loader_function = load_data_function(FLAGS.data)
+        # Now you can call the loader function to get your data
+        self.X, self.y, self.tests_number, self.map_test = data_loader_function()
         self.summarize_text_model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn").to(
             self.device)
         self.tokenizer_summarize_text_model = BartTokenizer.from_pretrained("facebook/bart-large-cnn")

@@ -49,12 +49,12 @@ Define the feature costs by setting `self.cost_list` in the `MultimodalGuesser` 
 
 
 ## **Examples**
-![Qualitative Example](p-cafe-image-figure1.png)
+![Qualitative Example](images/p-cafe-image-figure1.png)
  As shown in the Figure,  P-CAFE iteratively selects features in stages, personalizing the FS process to individual cases. It integrates demographic, laboratory, categorical, and textual data iteratively.
 
 
 
-![Clinical Interpretability](image2.png)
+![Clinical Interpretability](images/image2.png)
 We conducted an experiment on the Diabetes Prediction dataset.  
 The figure shows that for patients with a high blood glucose level and patient-reported information indicating poor health (e.g., high BMI and positive hypertension status, as in Patient A), the model confidently stops and predicts the patient as diabetic. 
 In contrast, when the blood glucose level is moderate (Patient B), the model continues to acquire additional features (HbA1c level) before making a prediction, reflecting the need for further confirmation. 

@@ -2,6 +2,7 @@
 
 **P-CAFE** is a Python library designed for feature selection (FS) in electronic health record (EHR) datasets.
 
+This package is based on the following paper-
 ## **Key Contributions**
 
 ## **Personalized Cost-Aware Feature Selection (FS):**  
@@ -19,12 +20,13 @@ To generate the benchmark datasets:
 - **MIMIC-III with Costs**  
 - **MIMIC-III Multi-Modal Dataset**  
 - **eICU Dataset**
+
 Navigate to the **`Dataset_Creation`** directory for instructions.
 
 
 
 > **Important:**  
-> The MIMIC-III data itself is not provided. You must acquire the data independently from [MIMIC-III on PhysioNet](https://mimic.physionet.org/).
+> The MIMIC-III and eICU data are not provided. You must acquire the data independently from [MIMIC-III on PhysioNet](https://mimic.physionet.org/), [eICU on PhysioNet](https://physionet.org/content/eicu-crd/2.0/).
 
 ## **Running the Code**
 
@@ -37,13 +39,12 @@ Supported datasets:
 - `pcafe_utils.load_mimic_text()` – MIMIC-III multimodal data (includes clinical text)
 - `pcafe_utils.load_mimic_time_series()` – MIMIC-III numeric time series
 
-Also, define the feature acquisition costs by setting `self.cost_list` in the `MultimodalGuesser` class.
+Define the feature costs by setting `self.cost_list` in the `MultimodalGuesser` class.
 
 
 2. Running the embedder_guesser Module
 
-3. For the DDQN agent run **`main_robust.py`**
-  for other agent run **`main_sb3.py`** and choose the RL agent.
+3. For the DDQN agent run **`main_robust.py`**, for other agent run **`main_sb3.py`** and choose the RL agent.
 
 
 ## **Examples**

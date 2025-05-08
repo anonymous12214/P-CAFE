@@ -35,7 +35,7 @@ parser.add_argument("--directory",
                     help="Directory for saved models")
 parser.add_argument("--num_epochs",
                     type=int,
-                    default=1000,
+                    default=10000,
                     help="number of epochs")
 parser.add_argument("--hidden-dim1",
                     type=int,
@@ -56,7 +56,7 @@ parser.add_argument("--weight_decay",
 # change these parameters
 parser.add_argument("--val_trials_wo_im",
                     type=int,
-                    default=4,
+                    default=30,
                     help="Number of validation trials without improvement")
 parser.add_argument("--fraction_mask",
                     type=int,
@@ -64,7 +64,7 @@ parser.add_argument("--fraction_mask",
                     help="fraction mask")
 parser.add_argument("--run_validation",
                     type=int,
-                    default=5,
+                    default=100,
                     help="after how many epochs to run validation")
 parser.add_argument("--batch_size",
                     type=int,
@@ -151,12 +151,13 @@ class MultimodalGuesser(nn.Module):
     def __init__(self):
         super(MultimodalGuesser, self).__init__()
         self.device = DEVICE
-        # self.X, self.y, self.tests_number, self.map_test = pcafe_utils.load_mimic_text()
-        self.X, self.y, self.tests_number, self.map_test = pcafe_utils.load_mimic_text()
+        #self.X, self.y, self.tests_number, self.map_test = pcafe_utils.load_mimic_text()
+        self.X, self.y, self.tests_number, self.map_test = pcafe_utils.read_eICU()
+
         # self.X, self.y, self.tests_number, self.map_test = pcafe_utils.load_mimic_no_text()
-        self.summarize_text_model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn").to(
-            self.device)
-        self.tokenizer_summarize_text_model = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+        # self.summarize_text_model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn").to(
+        #     self.device)
+        # self.tokenizer_summarize_text_model = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
 
         # self.text_model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT").to(self.device)
         # self.tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
@@ -466,7 +467,7 @@ def train_model(model,
                 print('Did not achieve val AUC improvement for {} trials, training is done.'.format(
                     FLAGS.val_trials_wo_im))
                 break
-        print("finished " + str(j) + " out of " + str(nepochs) + " epochs")
+        # print("finished " + str(j) + " out of " + str(nepochs) + " epochs")
 
     plot_running_loss(loss_list)
 
@@ -511,6 +512,8 @@ def val(model, X_val, y_val, best_val_auc=0):
         save_model(model)
     return accuracy
 
+from sklearn.metrics import confusion_matrix, roc_auc_score, precision_recall_curve, auc
+
 
 def test(model, X_test, y_test):
     X_test = X_test.to_numpy()
@@ -519,23 +522,29 @@ def test(model, X_test, y_test):
     guesser_state_dict = torch.load(guesser_load_path)
     model.load_state_dict(guesser_state_dict)
     model.eval()
+
     correct = 0
     y_true = []
     y_pred = []
+    y_scores = []  # For probability scores for AUC
+
     with torch.no_grad():
         for i in range(len(X_test)):
             input = X_test[i]
             label = torch.tensor(y_test[i], dtype=torch.long).to(model.device)
             output = model(input)
+
             _, predicted = torch.max(output.data, 1)
             if predicted == label:
                 correct += 1
 
             y_true.append(label.item())  # Assuming labels is a numpy array
             y_pred.append(predicted.item())
+            y_scores.append(torch.softmax(output, dim=1)[:, 1].item())  # Get the probability for class 1
 
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
+    y_scores = np.array(y_scores)
 
     # Calculate and print confusion matrix
     conf_matrix = confusion_matrix(y_true, y_pred)
@@ -545,6 +554,15 @@ def test(model, X_test, y_test):
     # Calculate accuracy
     accuracy = np.sum(np.diag(conf_matrix)) / np.sum(conf_matrix)
     print(f'Test Accuracy: {accuracy:.2f}')
+
+    # AUC-ROC
+    auc_roc = roc_auc_score(y_true, y_scores)
+    print(f'AUC-ROC: {auc_roc:.2f}')
+
+    # AUC-PC (Precision-Recall AUC)
+    precision, recall, _ = precision_recall_curve(y_true, y_scores)
+    auc_pc = auc(recall, precision)
+    print(f'AUC-PC: {auc_pc:.2f}')
 
 
 def main():

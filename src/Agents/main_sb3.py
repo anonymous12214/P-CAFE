@@ -90,26 +90,33 @@ parser.add_argument("--device",
 FLAGS = parser.parse_args(args=[])
 
 
-# Define agent for PPO
+# ======== AGENT DEFINITIONS ========
+
+
 def PPO_agent():
+    """
+    Create and train a PPO agent in the custom environment.
+    Returns:
+        model: Trained PPO model
+        env: The training environment
+    """
     env = myEnv(flags=FLAGS)
     model = PPO("MlpPolicy", env, verbose=1)
     model.learn(total_timesteps=100000)
     return model, env
 
 
-# Define agent for SAC
-def SAC_agent():
-    env = myEnv(flags=FLAGS)
-    model = SACDiscrete("MlpPolicy", env, verbose=1)
-    # model = SAC("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=100000)
-    return model, env
 
 
 
 # Define agent for DQN
 def DQN_agent():
+    """
+    Create and train a DQN agent in the custom environment.
+    Returns:
+        model: Trained DQN model
+        env: The training environment
+    """
     env = myEnv(flags=FLAGS)
     model = DQN("MlpPolicy", env, verbose=1)
     model.learn(total_timesteps=100000)
@@ -118,6 +125,12 @@ def DQN_agent():
 
 # Define agent for A2C
 def A2C_agent():
+    """
+    Create and train an A2C agent in the custom environment.
+    Returns:
+        model: Trained A2C model
+        env: The training environment
+    """
     env = myEnv(flags=FLAGS)
     model = A2C("MlpPolicy", env, verbose=1)
     model.learn(total_timesteps=100000)
@@ -126,6 +139,12 @@ def A2C_agent():
 
 # Define agent for TD3
 def TD3_agent():
+    """
+    Create and train a TD3 agent in the custom environment.
+    Returns:
+        model: Trained TD3 model
+        env: The training environment
+    """
     env = myEnv(flags=FLAGS)
     model = TD3("MlpPolicy", env, verbose=1)
     model.learn(total_timesteps=100000)
@@ -133,6 +152,17 @@ def TD3_agent():
 
 
 def test(env, model, agent) -> float:
+    """
+       Evaluate the performance of a trained agent on a test set.
+
+       Args:
+           env: The environment configured in test mode
+           model: The trained RL model
+           agent: The type of agent (string identifier, not used in this snippet)
+
+       Returns:
+           float: Placeholder for performance metric (e.g., accuracy or reward)
+       """
     print('Running Test')
     y_hat_test = np.zeros(len(env.y_test))
     y_hat_probs = np.zeros(len(env.y_test))
@@ -176,16 +206,15 @@ def test(env, model, agent) -> float:
 
 def main():
     os.chdir(FLAGS.directory)
-    # model, env = PPO_agent()
-    # test(env, model, 'PPO')
+    model, env = PPO_agent()
+    test(env, model, 'PPO')
     model, env = DQN_agent()
     test(env, model, 'DQN')
-    # model, env = A2C_agent()
-    # test(env, model, 'A2C')
-    # model, env = TD3_agent()
-    # test(env, model, 'TD3')
-    # model, env = SAC_agent()
-    # test(env, model, 'SAC')
+    model, env = A2C_agent()
+    test(env, model, 'A2C')
+    model, env = TD3_agent()
+    test(env, model, 'TD3')
+
 
 
 if __name__ == '__main__':

@@ -11,13 +11,10 @@ from sklearn.model_selection import train_test_split
 from transformers import AutoModel, AutoTokenizer, \
     BartForConditionalGeneration, BartTokenizer
 import argparse
-
 import pcafe_utils
 import pandas as pd
 import json
 from pathlib import Path
-
-# import spacy
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -94,14 +91,16 @@ parser.add_argument(
     )
 )
 
-
-
-
-
 FLAGS = parser.parse_args(args=[])
 
 
 class ImageEmbedder(nn.Module):
+    """
+    A CNN-based module for embedding grayscale images.
+    It resizes input images to 28x28, applies 2 convolutional layers,
+    followed by pooling and two fully connected layers to produce a 20-dim embedding.
+    """
+
     def __init__(self):
         super(ImageEmbedder, self).__init__()
         # Define CNN layers for embedding
@@ -129,10 +128,11 @@ class ImageEmbedder(nn.Module):
 
 def map_features_to_indices(data):
     """
-    Map features to indices based on their type.
-    If any value in a column is a string, treat the column as text.
-    :param data: 2D array-like dataset (list of lists, numpy array, or pandas DataFrame)
-    :return: A dictionary mapping feature indices to lists of indices and the total number of features
+    Assigns index mappings to each feature based on whether the feature is text or numeric.
+    Text features receive 20 indices, numeric features receive 1 index.
+
+    :param data: Dataset (list, numpy array, or list of DataFrames)
+    :return: (index_map: dict, total_features: int)
     """
     index_map = {}
     current_index = 0
@@ -160,6 +160,15 @@ def map_features_to_indices(data):
 
 
 class LSTMEncoder(nn.Module):
+    """
+     Encodes sequential data using a standard or bidirectional LSTM.
+
+     :param input_dim: Size of input features
+     :param hidden_dim: Size of LSTM hidden state
+     :param num_layers: Number of LSTM layers
+     :param bidirectional: Whether to use bidirectional LSTM
+     """
+
     def __init__(self, input_dim, hidden_dim, num_layers=1, bidirectional=False):
         super(LSTMEncoder, self).__init__()
         self.lstm = nn.LSTM(
@@ -181,8 +190,13 @@ class LSTMEncoder(nn.Module):
         return embedding
 
 
-
 def load_data_function(data_loader_name):
+    """
+    Dynamically loads a data loading function by name.
+
+    :param data_loader_name: String key for the data loader
+    :return: Function pointer to data loader
+    """
     data_loaders = {
         "load_time_Series": pcafe_utils.load_time_Series,
         "load_mimic_text": pcafe_utils.load_mimic_text,
@@ -193,37 +207,73 @@ def load_data_function(data_loader_name):
     return data_loaders.get(data_loader_name, pcafe_utils.load_time_Series)  # Default to load_time_Series
 
 
-
 class MultimodalGuesser(nn.Module):
+    """
+    A multimodal model designed to process and classify heterogeneous medical inputs,
+    including structured tabular features, images, text (e.g., clinical notes), and time series.
+
+    Components:
+    - Uses BART for summarization.
+    - Uses ClinicalBERT for embedding textual features.
+    - CNN for image embedding.
+    - LSTM for time series embedding.
+    - Fully connected layers for classification.
+
+    Attributes:
+        device (torch.device): The device (CPU/GPU) to run the model on.
+        X (list/array): Input data.
+        y (array): Corresponding labels.
+        tests_number (int): Number of tests (features).
+        map_test (dict): Mapping of test indices.
+        summarize_text_model (nn.Module): BART model for text summarization.
+        tokenizer_summarize_text_model (Tokenizer): Tokenizer for BART.
+        text_model (nn.Module): ClinicalBERT model for text embedding.
+        tokenizer (Tokenizer): Tokenizer for ClinicalBERT.
+        cost_list (list): Cost for each feature.
+        cost_budget (int): Total cost allowed.
+        img_embedder (nn.Module): CNN-based image embedder.
+        time_series_embedder (nn.Module): LSTM encoder for time series data.
+        text_reducer (nn.Linear): Reduces text embedding dimensions.
+        num_classes (int): Number of prediction classes.
+        map_feature (dict): Maps feature indices to embedded feature vectors.
+        features_total (int): Total length of the embedded feature vector.
+        layer1/2/3 (nn.Sequential): Fully connected hidden layers.
+        logits (nn.Linear): Final classification layer.
+        criterion (nn.Module): CrossEntropy loss.
+        optimizer (torch.optim): Adam optimizer.
+        path_to_save (str): Path to save model checkpoints.
+    """
+
     def __init__(self):
         super(MultimodalGuesser, self).__init__()
         self.device = DEVICE
         # Load the function based on the argument
         data_loader_function = load_data_function(FLAGS.data)
-        # Now you can call the loader function to get your data
         self.X, self.y, self.tests_number, self.map_test = data_loader_function()
+        # load summarization model
         self.summarize_text_model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn").to(
             self.device)
         self.tokenizer_summarize_text_model = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+        # load clinicalBERT model
 
-        # self.text_model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT").to(self.device)
-        # self.tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
-
-        local_model_path = os.path.join(os.getcwd(), 'Integration/clinicalBert')
-        self.text_model = AutoModel.from_pretrained(local_model_path).to(self.device)
-        self.tokenizer = AutoTokenizer.from_pretrained(local_model_path)
+        self.text_model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT").to(self.device)
+        self.tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+        # load cost list
         self.cost_list = [1] * (self.tests_number + 1)
         if isinstance(self.X, list):
             self.cost_list = [0] + [1] * (self.tests_number)
         self.cost_budget = sum(self.cost_list)
-
+        # define image embedder
         self.img_embedder = ImageEmbedder()
+        # load LSTM model for time series data
         if isinstance(self.X, list):
             self.time_series_embedder = LSTMEncoder(self.X[0].shape[1], 20).to(self.device)
+        # define dimention of embedding
         self.text_reducer = nn.Linear(FLAGS.text_embed_dim, FLAGS.reduced_dim).to(self.device)
         self.text_reduced_dim = FLAGS.reduced_dim
         self.num_classes = len(np.unique(self.y))
         self.map_feature, self.features_total = map_features_to_indices(self.X)
+        # defin the NN
         self.layer1 = torch.nn.Sequential(
             torch.nn.Linear(self.features_total, FLAGS.hidden_dim1),
             torch.nn.PReLU(),
@@ -297,14 +347,30 @@ class MultimodalGuesser(nn.Module):
         return F.relu(self.text_reducer(cls_embedding))
 
     def embed_image(self, image_path):
-        # Get image embedding using ImageEmbedder
+        """
+        Converts an image file into a 20-dimensional embedding using the internal ImageEmbedder.
+
+        Args:
+            image_path (str): Path to the grayscale image file (.png or .jpg).
+
+        Returns:
+            torch.Tensor: Embedded image tensor of shape [1, 20].
+        """
         img = Image.open(image_path).convert('L')  # Open the image
         img = self.img_embedder.transform(img).unsqueeze(0).to(self.device)  # Apply transforms and add batch dimension
         embedding = self.img_embedder(img).to(self.device)
         return embedding
 
     def is_numeric_value(self, value):
-        # Check if the value is an integer, a floating-point number, or a tensor of type float or double
+        """
+        Determines whether a given value is numeric (int, float, or float tensor).
+
+        Args:
+            value: A single feature value.
+
+        Returns:
+            bool: True if value is numeric, False otherwise.
+        """
         if isinstance(value, (int, float)):
             return True
         elif isinstance(value, torch.Tensor):
@@ -313,14 +379,30 @@ class MultimodalGuesser(nn.Module):
         return False
 
     def is_text_value(self, value):
-        # Check if the value is a string
+        """
+        Determines if a feature is a textual value (str).
+
+        Args:
+            value: A single feature value.
+
+        Returns:
+            bool: True if the value is a string.
+        """
         if isinstance(value, str):
             return True
         else:
             return False
 
     def is_image_value(self, value):
-        # check if value is path that ends with 'png' or 'jpg'
+        """
+        Checks if a feature is an image path based on its file extension.
+
+        Args:
+            value: A single feature value.
+
+        Returns:
+            bool: True if value is a path ending in 'png' or 'jpg'.
+        """
         if isinstance(value, str):
             if value.endswith('png') or value.endswith('jpg'):
                 return True
@@ -328,19 +410,55 @@ class MultimodalGuesser(nn.Module):
                 return False
 
     def is_time_series_value(self, value):
-        # Check if the value is a time series
+        """
+        Determines whether the input value is a time-series represented as a pandas DataFrame.
+
+        Args:
+            value: Input to be checked.
+
+        Returns:
+            bool: True if the input is a DataFrame.
+        """
         if isinstance(value, pd.DataFrame):
             return True
         else:
             return False
 
     def text_to_vec(self, text):
+        """
+        Converts input text into a reduced-dimensional embedding vector.
+
+        Parameters
+        ----------
+        text : str
+            The input text to be embedded.
+
+        Returns
+        -------
+        torch.Tensor
+            A ReLU-activated reduced-dimensional embedding vector.
+        """
         summary = self.summarize_text(text)
         doc = self.nlp(summary)
         vec = doc.vector
         return F.relu(self.text_reducer(torch.tensor(vec).to(self.device)))
 
     def forward(self, input, mask=None):
+        """
+         Forward pass of the model. Handles both time-series and flat feature inputs.
+
+         Parameters
+         ----------
+         input : pd.DataFrame or list
+             The input sample, can be a time-series DataFrame or a list of features.
+         mask : np.array or torch.Tensor, optional
+             A binary mask to apply to the input features.
+
+         Returns
+         -------
+         torch.Tensor
+             Probability distribution over classes after applying softmax.
+         """
         sample_embeddings = []
 
         # Check if input is a time series (e.g., DataFrame)
@@ -398,11 +516,19 @@ class MultimodalGuesser(nn.Module):
 
 
 def create_mask(model) -> np.array:
-    '''
-    Mask feature of the input
-    :param images: input
-    :return: masked input
-    '''
+    """
+    Creates a random binary mask over features for input masking during training.
+
+    Parameters
+    ----------
+    model : object
+        The model instance containing feature mapping.
+
+    Returns
+    -------
+    np.array
+        A binary mask indicating which features are kept (1) or masked (0).
+    """
     mapping = model.map_feature
     binary_mask = np.zeros(model.features_total)
     for key, value in mapping.items():
@@ -417,6 +543,24 @@ def create_mask(model) -> np.array:
 
 
 def create_adverserial_input(sample, label, pretrained_model):
+    """
+    Generates an adversarial mask by identifying the most influential feature
+    for a given sample and zeroing it out.
+
+    Parameters
+    ----------
+    sample : pd.DataFrame or list
+        The input data sample.
+    label : torch.Tensor
+        Ground-truth label for the sample.
+    pretrained_model : object
+        The trained model used to compute gradients.
+
+    Returns
+    -------
+    np.array
+        A binary mask with the most influential feature zeroed out.
+    """
     pretrained_model.eval()
 
     # Convert the sample into a proper forward-pass input
@@ -499,6 +643,18 @@ def create_adverserial_input(sample, label, pretrained_model):
 
 
 def plot_running_loss(loss_list):
+    """
+    Plots the training loss over time.
+
+    Parameters
+    ----------
+    loss_list : list of float
+        A list containing the running average loss per epoch.
+
+    Returns
+    -------
+    None
+    """
     import matplotlib.pyplot as plt
     plt.plot(loss_list)
     plt.xlabel('Iteration')
@@ -508,12 +664,49 @@ def plot_running_loss(loss_list):
 
 
 def compute_probabilities(j, total_episodes):
+    """
+    Computes the probability for applying a random mask vs. adversarial mask.
+
+    Parameters
+    ----------
+    j : int
+        Current training epoch.
+    total_episodes : int
+        Total number of training epochs.
+
+    Returns
+    -------
+    float
+        Probability of applying a random mask.
+    """
     prob_mask = 0.8 + 0.2 * (1 - j / total_episodes)  # Starts at 1, decreases to 0.8
     return prob_mask
 
 
 def train_model(model,
                 nepochs, X_train, y_train, X_val, y_val):
+    """
+    Trains the model using random or adversarial feature masking.
+
+    Parameters
+    ----------
+    model : object
+        The model to be trained.
+    nepochs : int
+        Number of training epochs.
+    X_train : array-like
+        Training inputs.
+    y_train : array-like
+        Training labels.
+    X_val : array-like
+        Validation inputs.
+    y_val : array-like
+        Validation labels.
+
+    Returns
+    -------
+    None
+    """
     if isinstance(X_train, list):
         pass
     else:
@@ -572,12 +765,18 @@ def train_model(model,
 
 
 def save_model(model):
-    '''
-    Save the model to a given path
-    :param model: model to save
-    :param path: path to save the model to
-    :return: None
-    '''
+    """
+    Saves the model's state dictionary to disk.
+
+    Parameters
+    ----------
+    model : object
+        The model to save.
+
+    Returns
+    -------
+    None
+    """
     path = model.path_to_save
     if not os.path.exists(path):
         os.makedirs(path)
@@ -592,8 +791,26 @@ def save_model(model):
 
 
 def val(model, X_val, y_val, best_val_auc=0):
-    model.eval()
+    """
+    Evaluates the model on validation data and returns updated AUC.
 
+    Parameters
+    ----------
+    model : object
+        The model to evaluate.
+    X_val : array-like
+        Validation inputs.
+    y_val : array-like
+        Validation labels.
+    best_val_auc : float, optional
+        Best validation AUC so far.
+
+    Returns
+    -------
+    float
+        Updated best validation AUC.
+    """
+    model.eval()
     correct = 0
     y_true = []
     y_pred = []
@@ -643,6 +860,13 @@ def val(model, X_val, y_val, best_val_auc=0):
 
 
 def test(model, X_test, y_test):
+    """
+    Tests the model on the test dataset and prints evaluation metrics.
+    :param model:
+    :param X_test:
+    :param y_test:
+    :return:
+    """
     guesser_filename = 'best_guesser.pth'
     guesser_load_path = os.path.join(model.path_to_save, guesser_filename)
     guesser_state_dict = torch.load(guesser_load_path)

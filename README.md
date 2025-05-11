@@ -4,6 +4,11 @@
 
 This package is based on the following paper-
 
+![Qualitative Example](figures/p-cafe-image-figure1.png)
+P-CAFE iteratively selects features in stages, personalizing the FS process to individual cases. It integrates demographic, laboratory, categorical, and textual data iteratively.
+
+
+
 #### Installation
    pip install -r requirements.txt
 
@@ -52,11 +57,7 @@ Define the feature costs by setting `self.cost_list` in the `MultimodalGuesser` 
 4. For the DDQN agent run **`main_robust.py in the DDQN folder`**, for other agent run **`main_sb3.py`** in the Agents folder and choose the RL agent.
 
 
-## **Examples**
-![Qualitative Example](figures/p-cafe-image-figure1.png)
- As shown in the Figure,  P-CAFE iteratively selects features in stages, personalizing the FS process to individual cases. It integrates demographic, laboratory, categorical, and textual data iteratively.
-
-
+## **Another Example**
 
 ![Clinical Interpretability](figures/image2.png)
 We conducted an experiment on the Diabetes Prediction dataset.  
